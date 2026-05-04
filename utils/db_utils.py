@@ -1,22 +1,27 @@
 import configparser
-import pymysql
 import os
 from contextlib import contextmanager
+
+import pymysql
+
 
 class DatabaseConfig:
     def __init__(self, config_path=None):
         if config_path is None:
-            config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'db', 'config.ini')
+            db_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "db")
+            local_config = os.path.join(db_dir, "config.ini")
+            sample_config = os.path.join(db_dir, "config.example.ini")
+            config_path = local_config if os.path.exists(local_config) else sample_config
 
         self.config = configparser.ConfigParser()
-        self.config.read(config_path, encoding='utf-8')
+        self.config.read(config_path, encoding="utf-8")
 
-        self.host = self.config.get('database', 'host')
-        self.port = self.config.getint('database', 'port')
-        self.user = self.config.get('database', 'user')
-        self.password = self.config.get('database', 'password')
-        self.database = self.config.get('database', 'database')
-        self.charset = self.config.get('database', 'charset')
+        self.host = self.config.get("database", "host")
+        self.port = self.config.getint("database", "port")
+        self.user = self.config.get("database", "user")
+        self.password = self.config.get("database", "password")
+        self.database = self.config.get("database", "database")
+        self.charset = self.config.get("database", "charset")
 
 
 class DatabaseConnection:
@@ -35,10 +40,10 @@ class DatabaseConnection:
                     database=self.config.database,
                     charset=self.config.charset,
                     cursorclass=pymysql.cursors.DictCursor,
-                    autocommit=False
+                    autocommit=False,
                 )
-            except pymysql.Error as e:
-                print(f"Database connection failed: {e}")
+            except pymysql.Error as exc:
+                print(f"Database connection failed: {exc}")
                 raise
         return self.connection
 
@@ -75,7 +80,7 @@ class DatabaseConnection:
                 affected = cursor.execute(sql, params)
                 conn.commit()
                 return affected
-        except Exception as e:
+        except Exception:
             conn.rollback()
             raise
         finally:
@@ -90,7 +95,7 @@ class DatabaseConnection:
                     cursor.callproc(proc_name, args)
                 else:
                     cursor.callproc(proc_name)
-                
+
                 results = []
                 while True:
                     result = cursor.fetchall()
@@ -106,6 +111,7 @@ class DatabaseConnection:
 
 
 _db_instance = None
+
 
 def get_db():
     global _db_instance

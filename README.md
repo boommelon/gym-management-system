@@ -22,23 +22,23 @@ gym_system/
 |-- requirements.txt
 |-- README.md
 |-- db/
-|   |-- config.ini
+|   |-- config.example.ini
 |   |-- init_db.sql
 |   `-- upgrade_existing_db.sql
 |-- services/
 |   |-- auth_service.py
-|   |-- member_service.py
 |   |-- course_service.py
-|   `-- equipment_service.py
+|   |-- equipment_service.py
+|   `-- member_service.py
 |-- utils/
 |   `-- db_utils.py
 `-- views/
     |-- common.py
+    |-- course_views.py
+    |-- equipment_views.py
     |-- login_window.py
     |-- main_window.py
-    |-- member_views.py
-    |-- course_views.py
-    `-- equipment_views.py
+    `-- member_views.py
 ```
 
 ## 数据库设计要点
@@ -81,14 +81,17 @@ pip install -r requirements.txt
 
 ## 数据库配置
 
-编辑 `db/config.ini`：
+1. 将 `db/config.example.ini` 复制为 `db/config.ini`
+2. 按本机 MySQL 环境修改账号密码
+
+示例内容：
 
 ```ini
 [database]
 host = 127.0.0.1
 port = 3306
 user = root
-password = zk406521
+password = your_password_here
 database = gym_db
 charset = utf8mb4
 ```
