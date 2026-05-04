@@ -67,6 +67,15 @@ class CardTypeService:
                  WHERE id=%s"""
         return get_db().execute_update(sql, (name, card_category, times_limit, valid_days, price, description, card_type_id))
 
+    def get_card_type_options(self):
+        """获取基础卡类型选项。"""
+        return [
+            {"label": "次卡", "requires_times_limit": True, "requires_valid_days": False},
+            {"label": "月卡", "requires_times_limit": False, "requires_valid_days": True},
+            {"label": "季卡", "requires_times_limit": False, "requires_valid_days": True},
+            {"label": "年卡", "requires_times_limit": False, "requires_valid_days": True},
+        ]
+
 
 class MemberCardService:
     """会员卡服务"""
@@ -104,8 +113,6 @@ class MemberCardService:
 
     def add_member_card(self, member_id, card_type_id, price, buy_date=None):
         """办理会员卡"""
-        db = get_db()
-
         # 获取卡类型信息
         card_type = CardTypeService().get_card_type_by_id(card_type_id)
         if not card_type:
@@ -132,7 +139,19 @@ class MemberCardService:
         if buy_date is None:
             buy_date = datetime.now().strftime('%Y-%m-%d')
 
-        return db.execute_update(sql, (member_id, card_type_id, buy_date, expire_date, remain_times, price))
+        return get_db().execute_update(sql, (member_id, card_type_id, buy_date, expire_date, remain_times, price))
+
+    def get_member_card_summary(self, member_id):
+        """获取会员当前有效会员卡摘要。"""
+        valid_card = self.get_valid_member_card(member_id)
+        if valid_card:
+            if valid_card["card_category"] == "次卡":
+                summary = f"{valid_card['card_type_name']}，剩余 {valid_card.get('remain_times', 0)} 次"
+            else:
+                summary = f"{valid_card['card_type_name']}，有效期至 {valid_card.get('expire_date')}"
+            return {"has_valid_card": True, "summary": summary, "card": valid_card}
+
+        return {"has_valid_card": False, "summary": "暂无有效会员卡", "card": None}
 
     def get_member_consumption(self, member_id):
         """获取会员消费明细（调用存储过程）"""

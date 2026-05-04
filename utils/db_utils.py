@@ -1,6 +1,7 @@
 import configparser
 import pymysql
 import os
+from contextlib import contextmanager
 
 class DatabaseConfig:
     def __init__(self, config_path=None):
@@ -45,6 +46,18 @@ class DatabaseConnection:
         if self.connection and self.connection.open:
             self.connection.close()
             self.connection = None
+
+    @contextmanager
+    def transaction(self):
+        conn = self.connect()
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            self.close()
 
     def execute_query(self, sql, params=None):
         conn = self.connect()
