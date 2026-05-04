@@ -99,14 +99,14 @@ class EquipmentManagerView:
     def open_equipment_dialog(self, equipment=None):
         dialog = tk.Toplevel(self.parent)
         dialog.title("编辑器材" if equipment else "添加器材")
-        dialog.geometry("420x260")
+        dialog.geometry("450x340")
         dialog.transient(self.parent)
         dialog.grab_set()
 
         values = equipment or {}
         entries = {}
         y = 20
-        for text, key in [("名称", "name"), ("类别", "equipment_type"), ("备注", "remark")]:
+        for text, key in [("名称", "name"), ("类别", "equipment_type"), ("购入日期", "buy_date"), ("备注", "remark")]:
             tk.Label(dialog, text=f"{text}:").place(x=50, y=y)
             entry = tk.Entry(dialog, width=28)
             entry.place(x=130, y=y)
@@ -114,25 +114,43 @@ class EquipmentManagerView:
             entries[key] = entry
             y += 40
 
+        tk.Label(dialog, text="状态:").place(x=50, y=y)
+        status_var = tk.StringVar(value=values.get("status", "在库"))
+        status_options = ["在库", "借出", "维修中", "已报废"]
+        ttk.Combobox(
+            dialog,
+            textvariable=status_var,
+            values=status_options,
+            state="readonly",
+            width=26,
+        ).place(x=130, y=y)
+
         def save():
             try:
                 name = entries["name"].get().strip()
                 if not name:
                     raise ValueError("器材名称不能为空")
                 equipment_type = entries["equipment_type"].get().strip() or None
+                buy_date = entries["buy_date"].get().strip() or None
                 remark = entries["remark"].get().strip() or None
+                status = status_var.get() or "在库"
                 if equipment:
-                    self.equipment_service.update_equipment(equipment["id"], name, equipment_type, remark)
+                    self.equipment_service.update_equipment(
+                        equipment["id"], name, equipment_type, buy_date, remark, status
+                    )
                 else:
-                    self.equipment_service.add_equipment(name, equipment_type, None, remark)
+                    self.equipment_service.add_equipment(name, equipment_type, buy_date, remark, status)
                 dialog.destroy()
                 self.load_equipment()
                 messagebox.showinfo("成功", "器材信息已保存")
             except Exception as exc:
                 messagebox.showerror("错误", str(exc))
 
-        tk.Button(dialog, text="保存", command=save, width=10).place(x=130, y=y + 20)
-        tk.Button(dialog, text="取消", command=dialog.destroy, width=10).place(x=240, y=y + 20)
+        helper_text = "购入日期格式示例：2026-05-10；借还时间由系统自动生成"
+        tk.Label(dialog, text=helper_text, bg=WINDOW_BG, fg="#7f8c8d").place(x=50, y=y + 40)
+
+        tk.Button(dialog, text="保存", command=save, width=10).place(x=130, y=y + 75)
+        tk.Button(dialog, text="取消", command=dialog.destroy, width=10).place(x=240, y=y + 75)
 
     def borrow_equipment(self):
         dialog = tk.Toplevel(self.parent)

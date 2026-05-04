@@ -1,16 +1,24 @@
 import tkinter as tk
 
 from views.common import WINDOW_BG
-from views.course_views import BookingManagerView, CoachManagerView, ConsumptionQueryView, CourseManagerView, ReportViewer
+from views.course_views import (
+    BookingManagerView,
+    CoachManagerView,
+    ConsumptionQueryView,
+    CourseManagerView,
+    ReportViewer,
+)
 from views.equipment_views import EquipmentManagerView
+from views.login_window import LoginWindow
 from views.member_views import CardManagerView, MemberManagerView
 
 
 class MainWindow:
     """应用主窗口，只负责导航和内容切换。"""
 
-    def __init__(self, root):
+    def __init__(self, root, admin_info=None):
         self.root = root
+        self.admin_info = admin_info or {}
         self.root.title("健身房会员及课程管理系统")
         self.root.geometry("1200x760")
         self.root.configure(bg=WINDOW_BG)
@@ -29,6 +37,15 @@ class MainWindow:
             fg="white",
             bg="#2c3e50",
         ).pack(pady=12)
+
+        admin_name = self.admin_info.get("name") or self.admin_info.get("username") or "admin"
+        tk.Label(
+            title_frame,
+            text=f"管理员：{admin_name}",
+            font=("Microsoft YaHei UI", 10),
+            fg="#dfe6e9",
+            bg="#2c3e50",
+        ).place(relx=0.98, rely=0.5, anchor="e")
 
         body_frame = tk.Frame(self.root, bg=WINDOW_BG)
         body_frame.pack(fill=tk.BOTH, expand=True)
@@ -83,7 +100,7 @@ class MainWindow:
         ).pack(pady=120)
         tk.Label(
             self.content_frame,
-            text="本版本以课程设计基础功能为主，包含会员、课程、预约、器材、报表和存储过程查询功能。",
+            text="当前版本提供会员、课程、预约、器材、报表和消费查询等基础功能。",
             font=("Microsoft YaHei UI", 11),
             bg=WINDOW_BG,
             fg="#7f8c8d",
@@ -96,7 +113,14 @@ class MainWindow:
 
 def run():
     root = tk.Tk()
-    MainWindow(root)
+
+    def open_main_window(admin_info):
+        for widget in root.winfo_children():
+            widget.destroy()
+        root.unbind("<Return>")
+        MainWindow(root, admin_info)
+
+    LoginWindow(root, open_main_window)
     root.mainloop()
 
 

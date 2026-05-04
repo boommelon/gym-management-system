@@ -22,16 +22,16 @@ class EquipmentService:
         result = get_db().execute_query(sql, (equipment_id,))
         return result[0] if result else None
 
-    def add_equipment(self, name, equipment_type, buy_date=None, remark=None):
+    def add_equipment(self, name, equipment_type, buy_date=None, remark=None, status="在库"):
         sql = """INSERT INTO equipment (name, equipment_type, status, buy_date, remark)
-                 VALUES (%s, %s, '在库', %s, %s)"""
-        return get_db().execute_update(sql, (name, equipment_type, buy_date, remark))
+                 VALUES (%s, %s, %s, %s, %s)"""
+        return get_db().execute_update(sql, (name, equipment_type, status, buy_date, remark))
 
-    def update_equipment(self, equipment_id, name, equipment_type, remark):
+    def update_equipment(self, equipment_id, name, equipment_type, buy_date, remark, status):
         sql = """UPDATE equipment
-                 SET name = %s, equipment_type = %s, remark = %s
+                 SET name = %s, equipment_type = %s, buy_date = %s, remark = %s, status = %s
                  WHERE id = %s"""
-        return get_db().execute_update(sql, (name, equipment_type, remark, equipment_id))
+        return get_db().execute_update(sql, (name, equipment_type, buy_date, remark, status, equipment_id))
 
     def delete_equipment(self, equipment_id):
         sql = "DELETE FROM equipment WHERE id = %s"

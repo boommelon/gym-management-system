@@ -8,6 +8,10 @@ USE gym_db;
 
 SET NAMES utf8mb4;
 
+UPDATE admin
+SET password = '123456'
+WHERE username = 'admin';
+
 ALTER TABLE member
     MODIFY gender ENUM('男', '女') NOT NULL DEFAULT '男',
     MODIFY status ENUM('正常', '冻结', '已过期') NOT NULL DEFAULT '正常';

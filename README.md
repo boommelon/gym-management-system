@@ -6,44 +6,47 @@
 
 - 会员管理：会员信息增删改查、状态维护
 - 会员卡管理：卡类型管理、办卡记录管理
-- 教练管理：教练资料维护、离职标记
-- 课程管理：课程类别与排课管理
+- 教练管理：教练资料维护
+- 课程管理：课程类别与课程安排管理
 - 预约签到：会员预约、取消预约、签到、课程评价
 - 器材管理：器材信息、借用与归还
 - 数据报表：近一周课程预约人数、签到人数、签到率
 - 消费查询：调用存储过程查询会员卡、历史预约、消费明细
+- 登录功能：管理员账号密码登录后进入主界面
 
 ## 项目结构
 
 ```text
 gym_system/
-├── main.py
-├── requirements.txt
-├── README.md
-├── db/
-│   ├── config.ini
-│   ├── init_db.sql
-│   └── upgrade_existing_db.sql
-├── services/
-│   ├── member_service.py
-│   ├── course_service.py
-│   └── equipment_service.py
-├── utils/
-│   └── db_utils.py
-└── views/
-    ├── common.py
-    ├── main_window.py
-    ├── member_views.py
-    ├── course_views.py
-    └── equipment_views.py
+|-- main.py
+|-- requirements.txt
+|-- README.md
+|-- db/
+|   |-- config.ini
+|   |-- init_db.sql
+|   `-- upgrade_existing_db.sql
+|-- services/
+|   |-- auth_service.py
+|   |-- member_service.py
+|   |-- course_service.py
+|   `-- equipment_service.py
+|-- utils/
+|   `-- db_utils.py
+`-- views/
+    |-- common.py
+    |-- login_window.py
+    |-- main_window.py
+    |-- member_views.py
+    |-- course_views.py
+    `-- equipment_views.py
 ```
 
 ## 数据库设计要点
 
-系统核心实体包括：
+核心实体包括：
 
 - `member`：会员
-- `card_type`：卡类型
+- `card_type`：会员卡类型
 - `member_card`：会员办卡记录
 - `coach`：教练
 - `course`：课程类别
@@ -53,17 +56,17 @@ gym_system/
 - `equipment_borrow`：器材借还记录
 - `admin`：管理员
 
-数据库对象满足课程设计要求：
+数据库对象满足课设要求：
 
 - 触发器 `trg_after_checkin`
   - 会员签到后自动扣减次卡次数
-  - 时限卡按“当天第一次签到”扣减一天有效期
+  - 时限卡按签到情况更新有效期
 - 视图 `v_course_weekly_stats`
-  - 查询近一周课程预约人数、签到人数、签到率
+  - 查询课程近一周预约人数、签到人数、签到率
 - 存储过程 `sp_member_detail`
-  - 查询指定会员的有效卡信息、历史预约、消费明细
+  - 查询指定会员的剩余次数或有效期、历史预约记录、消费明细
 - 存储过程 `sp_update_schedule_status`
-  - 自动将过期课程与预约状态更新为结束/过期
+  - 自动更新过期课程和预约状态
 
 ## 环境要求
 
@@ -82,19 +85,17 @@ pip install -r requirements.txt
 
 ```ini
 [database]
-host = localhost
+host = 127.0.0.1
 port = 3306
 user = root
-password = your_password_here
+password = zk406521
 database = gym_db
 charset = utf8mb4
 ```
 
-## 数据库初始化方式
+## 数据库初始化
 
-### 1. 全新数据库
-
-如果你要新建一个干净数据库，执行：
+### 1. 全新建库
 
 ```bash
 mysql -u root -p < db/init_db.sql
@@ -102,18 +103,11 @@ mysql -u root -p < db/init_db.sql
 
 ### 2. 已有数据库升级
 
-如果你之前已经初始化过数据库，推荐执行升级脚本：
-
 ```bash
 mysql -u root -p gym_db < db/upgrade_existing_db.sql
 ```
 
-这个脚本会：
-
-- 尽量保留原有业务数据
-- 重建触发器、视图、存储过程
-- 修复状态枚举和值
-- 重新计算课程当前预约人数
+升级脚本会尽量保留原有业务数据，同时修复结构、视图、触发器、存储过程和默认管理员密码。
 
 ## 运行项目
 
@@ -121,19 +115,23 @@ mysql -u root -p gym_db < db/upgrade_existing_db.sql
 python main.py
 ```
 
-## 课程设计可对应的报告内容
+## 默认管理员账号
 
-你后续写报告时，可以围绕下面这些点展开：
+- 用户名：`admin`
+- 密码：`123456`
 
-- 需求分析：会员、教练、课程、器材四类业务
+## 当前版本说明
+
+- 程序启动后会先进入登录窗口。
+- 登录成功后进入主功能界面。
+- 表单中尽量只保留关键业务字段，自动生成字段由系统和数据库自动处理。
+
+## 课程设计报告可对应的内容
+
+- 需求分析：会员、教练、课程、器材四类核心业务
 - E-R 设计：会员与会员卡、课程与排课、排课与预约、器材与借用
-- 关系模式转换：各实体表和联系表
+- 关系模式转换：实体表和联系表设计
 - 完整性设计：主键、外键、唯一约束、状态枚举、评分范围
 - 数据库对象设计：触发器、视图、存储过程
 - 系统实现：Tkinter 前端 + Service 业务层 + MySQL
-- 维护方案：全量初始化脚本与升级脚本分离
-
-## 默认管理员
-
-- 用户名：`admin`
-- 密码：`admin`
+- 维护方案：初始化脚本与升级脚本分离

@@ -1,9 +1,79 @@
 import tkinter as tk
+from datetime import datetime
 from tkinter import messagebox, ttk
 
 from services.course_service import BookingService, CoachService, CourseScheduleService, CourseService, WeeklyStatsService
 from services.member_service import MemberCardService, MemberService
 from views.common import WINDOW_BG, clear_tree, create_action_bar, create_section_title, create_table
+
+TIME_SLOT_MAP = {
+    "上午": "09:00:00",
+    "下午": "14:00:00",
+    "晚上": "17:00:00",
+}
+
+
+def format_schedule_display(schedule_time):
+    """将数据库时间格式化为更适合界面展示的文本。"""
+    if isinstance(schedule_time, str):
+        try:
+            schedule_time = datetime.strptime(schedule_time, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                schedule_time = datetime.fromisoformat(schedule_time)
+            except ValueError:
+                return schedule_time
+
+    weekday_map = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    time_text = schedule_time.strftime("%H:%M")
+    slot = next((label for label, value in TIME_SLOT_MAP.items() if value.startswith(time_text[:2])), time_text)
+    return f"{schedule_time.strftime('%Y-%m-%d')} {weekday_map[schedule_time.weekday()]} {slot}"
+
+
+def format_datetime_display(date_time_value):
+    """格式化预约/签到时间，只保留到分钟。"""
+    if not date_time_value:
+        return ""
+
+    if isinstance(date_time_value, str):
+        try:
+            date_time_value = datetime.strptime(date_time_value, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                date_time_value = datetime.fromisoformat(date_time_value)
+            except ValueError:
+                return date_time_value
+
+    return date_time_value.strftime("%Y-%m-%d %H:%M")
+
+
+def split_schedule_datetime(schedule_time):
+    """把数据库中的排课时间拆成日期和时段。"""
+    if isinstance(schedule_time, str):
+        try:
+            schedule_time = datetime.strptime(schedule_time, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            schedule_time = datetime.fromisoformat(schedule_time)
+
+    date_text = schedule_time.strftime("%Y-%m-%d")
+    hour = schedule_time.hour
+    if hour < 12:
+        slot = "上午"
+    elif hour < 17:
+        slot = "下午"
+    else:
+        slot = "晚上"
+    return date_text, slot
+
+
+def build_schedule_datetime(date_text, slot):
+    """把日期和时段组合成数据库需要的 DATETIME 文本。"""
+    if not date_text:
+        raise ValueError("请选择上课日期")
+    if slot not in TIME_SLOT_MAP:
+        raise ValueError("请选择上课时段")
+    datetime.strptime(date_text, "%Y-%m-%d")
+    return f"{date_text} {TIME_SLOT_MAP[slot]}"
 
 
 class CoachManagerView:
@@ -182,7 +252,7 @@ class CourseManagerView:
 
     def setup_schedule_tab(self):
         columns = ("编号", "课程", "教练", "上课时间", "教室", "人数上限", "已预约", "状态")
-        widths = {"编号": 60, "课程": 120, "教练": 100, "上课时间": 160, "教室": 100}
+        widths = {"编号": 60, "课程": 120, "教练": 100, "上课时间": 180, "教室": 100}
         self.schedule_tree = create_table(self.schedule_frame, columns, widths)
         btn_frame = create_action_bar(self.schedule_frame)
         tk.Button(btn_frame, text="添加安排", command=self.add_schedule, width=12).pack(side=tk.LEFT, padx=5)
@@ -219,7 +289,7 @@ class CourseManagerView:
                     schedule["id"],
                     schedule["course_name"],
                     schedule["coach_name"],
-                    schedule["schedule_time"],
+                    format_schedule_display(schedule["schedule_time"]),
                     schedule.get("room", "") or "",
                     schedule.get("max_capacity", 0),
                     schedule.get("current_count", 0),
@@ -293,7 +363,7 @@ class CourseManagerView:
     def open_schedule_dialog(self, schedule=None):
         dialog = tk.Toplevel(self.parent)
         dialog.title("编辑排课" if schedule else "添加排课")
-        dialog.geometry("450x320")
+        dialog.geometry("470x360")
         dialog.transient(self.parent)
         dialog.grab_set()
 
@@ -320,17 +390,27 @@ class CourseManagerView:
             width=28,
         ).place(x=140, y=80)
 
-        tk.Label(dialog, text="上课时间:").place(x=50, y=130)
-        time_entry = tk.Entry(dialog, width=30)
-        time_entry.place(x=140, y=130)
+        tk.Label(dialog, text="上课日期:").place(x=50, y=130)
+        date_entry = tk.Entry(dialog, width=30)
+        date_entry.place(x=140, y=130)
 
-        tk.Label(dialog, text="教室:").place(x=50, y=180)
+        tk.Label(dialog, text="上课时段:").place(x=50, y=180)
+        slot_var = tk.StringVar()
+        ttk.Combobox(
+            dialog,
+            textvariable=slot_var,
+            values=list(TIME_SLOT_MAP.keys()),
+            state="readonly",
+            width=28,
+        ).place(x=140, y=180)
+
+        tk.Label(dialog, text="教室:").place(x=50, y=230)
         room_entry = tk.Entry(dialog, width=30)
-        room_entry.place(x=140, y=180)
+        room_entry.place(x=140, y=230)
 
-        tk.Label(dialog, text="人数上限:").place(x=50, y=230)
+        tk.Label(dialog, text="人数上限:").place(x=50, y=280)
         capacity_entry = tk.Entry(dialog, width=30)
-        capacity_entry.place(x=140, y=230)
+        capacity_entry.place(x=140, y=280)
 
         if schedule:
             for item in courses:
@@ -341,19 +421,23 @@ class CourseManagerView:
                 if item["id"] == schedule["coach_id"]:
                     coach_var.set(f"{item['id']}: {item['name']}")
                     break
-            time_entry.insert(0, str(schedule["schedule_time"]))
+            date_text, slot = split_schedule_datetime(schedule["schedule_time"])
+            date_entry.insert(0, date_text)
+            slot_var.set(slot)
             room_entry.insert(0, schedule.get("room", "") or "")
             capacity_entry.insert(0, str(schedule.get("max_capacity", 20)))
         else:
+            date_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
+            slot_var.set("上午")
             capacity_entry.insert(0, "20")
 
         def save():
             try:
-                if not course_var.get() or not coach_var.get() or not time_entry.get().strip():
+                if not course_var.get() or not coach_var.get() or not date_entry.get().strip():
                     raise ValueError("请填写完整的排课信息")
                 course_id = int(course_var.get().split(":")[0])
                 coach_id = int(coach_var.get().split(":")[0])
-                schedule_time = time_entry.get().strip()
+                schedule_time = build_schedule_datetime(date_entry.get().strip(), slot_var.get())
                 room = room_entry.get().strip() or None
                 max_capacity = int(capacity_entry.get().strip() or 20)
 
@@ -369,8 +453,11 @@ class CourseManagerView:
             except Exception as exc:
                 messagebox.showerror("错误", str(exc))
 
-        tk.Button(dialog, text="保存", command=save, width=10).place(x=140, y=270)
-        tk.Button(dialog, text="取消", command=dialog.destroy, width=10).place(x=250, y=270)
+        helper_text = "日期格式示例：2026-05-10；时段只区分上午/下午/晚上"
+        tk.Label(dialog, text=helper_text, bg=WINDOW_BG, fg="#7f8c8d").place(x=50, y=320)
+
+        tk.Button(dialog, text="保存", command=save, width=10).place(x=140, y=340)
+        tk.Button(dialog, text="取消", command=dialog.destroy, width=10).place(x=250, y=340)
 
     def delete_schedule(self):
         selection = self.schedule_tree.selection()
@@ -417,7 +504,7 @@ class BookingManagerView:
 
     def setup_booking_tab(self):
         columns = ("编号", "会员姓名", "手机号", "课程", "上课时间", "预约时间", "状态")
-        widths = {"编号": 60, "会员姓名": 90, "手机号": 120, "课程": 120, "上课时间": 160}
+        widths = {"编号": 60, "会员姓名": 90, "手机号": 120, "课程": 120, "上课时间": 180}
         self.booking_tree = create_table(self.booking_frame, columns, widths)
         btn_frame = create_action_bar(self.booking_frame)
         tk.Button(btn_frame, text="课程预约", command=self.open_booking_dialog, width=12).pack(side=tk.LEFT, padx=5)
@@ -425,7 +512,7 @@ class BookingManagerView:
 
     def setup_checkin_tab(self):
         columns = ("编号", "会员姓名", "手机号", "课程", "上课时间", "预约时间", "签到时间", "状态")
-        widths = {"编号": 60, "会员姓名": 90, "手机号": 120, "课程": 120, "上课时间": 160, "签到时间": 160}
+        widths = {"编号": 60, "会员姓名": 90, "手机号": 120, "课程": 120, "上课时间": 180, "签到时间": 160}
         self.checkin_tree = create_table(self.checkin_frame, columns, widths)
         btn_frame = create_action_bar(self.checkin_frame)
         tk.Button(btn_frame, text="会员签到", command=self.checkin, width=12).pack(side=tk.LEFT, padx=5)
@@ -446,8 +533,8 @@ class BookingManagerView:
                     booking["member_name"],
                     booking["member_phone"],
                     booking["course_name"],
-                    booking["schedule_time"],
-                    booking["book_time"],
+                    format_schedule_display(booking["schedule_time"]),
+                    format_datetime_display(booking["book_time"]),
                     booking["status"],
                 ),
             )
@@ -463,9 +550,9 @@ class BookingManagerView:
                     booking["member_name"],
                     booking["member_phone"],
                     booking["course_name"],
-                    booking["schedule_time"],
-                    booking["book_time"],
-                    booking.get("checkin_time", "") or "",
+                    format_schedule_display(booking["schedule_time"]),
+                    format_datetime_display(booking["book_time"]),
+                    format_datetime_display(booking.get("checkin_time", "") or ""),
                     booking["status"],
                 ),
             )
@@ -500,7 +587,10 @@ class BookingManagerView:
         ttk.Combobox(
             dialog,
             textvariable=schedule_var,
-            values=[f"{item['id']}: {item['course_name']} - {item['coach_name']} ({item['schedule_time']})" for item in schedules],
+            values=[
+                f"{item['id']}: {item['course_name']} - {item['coach_name']} ({format_schedule_display(item['schedule_time'])})"
+                for item in schedules
+            ],
             state="readonly",
             width=32,
         ).place(x=150, y=140)
@@ -671,7 +761,6 @@ class ConsumptionQueryView:
             width=30,
         )
         combo.pack(side=tk.LEFT, padx=10)
-        combo.bind("<<ComboboxSelected>>", lambda _event: self.query())
         tk.Button(select_frame, text="查询", command=self.query, width=10).pack(side=tk.LEFT, padx=10)
 
         self.result_text = tk.Text(self.parent, width=90, height=22, font=("Microsoft YaHei UI", 10), bg="white")

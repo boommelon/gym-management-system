@@ -176,13 +176,13 @@ INSERT INTO member_card (member_id, card_type_id, buy_date, expire_date, remain_
 (5, 2, '2026-04-15', NULL, 16, '正常', 900.00);
 
 INSERT INTO course_schedule (course_id, coach_id, schedule_time, room, max_capacity, current_count, status) VALUES
-(1, 1, DATE_ADD(NOW(), INTERVAL 1 DAY), '瑜伽教室A', 15, 0, '未开始'),
-(2, 1, DATE_ADD(NOW(), INTERVAL 2 DAY), '高温教室', 12, 0, '未开始'),
-(3, 2, DATE_ADD(NOW(), INTERVAL 1 DAY), '单车房', 25, 0, '未开始'),
-(4, 3, DATE_ADD(NOW(), INTERVAL 3 DAY), '力量区', 15, 0, '未开始'),
-(5, 4, DATE_ADD(NOW(), INTERVAL 4 DAY), '操课室', 30, 0, '未开始'),
-(1, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), '瑜伽教室A', 15, 0, '已结束'),
-(3, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), '单车房', 25, 0, '已结束');
+(1, 1, CONCAT(DATE(DATE_ADD(NOW(), INTERVAL 1 DAY)), ' 09:00:00'), '瑜伽教室A', 15, 0, '未开始'),
+(2, 1, CONCAT(DATE(DATE_ADD(NOW(), INTERVAL 2 DAY)), ' 14:00:00'), '高温教室', 12, 0, '未开始'),
+(3, 2, CONCAT(DATE(DATE_ADD(NOW(), INTERVAL 1 DAY)), ' 17:00:00'), '单车房', 25, 0, '未开始'),
+(4, 3, CONCAT(DATE(DATE_ADD(NOW(), INTERVAL 3 DAY)), ' 09:00:00'), '力量区', 15, 0, '未开始'),
+(5, 4, CONCAT(DATE(DATE_ADD(NOW(), INTERVAL 4 DAY)), ' 14:00:00'), '操课室', 30, 0, '未开始'),
+(1, 1, CONCAT(DATE(DATE_SUB(NOW(), INTERVAL 2 DAY)), ' 09:00:00'), '瑜伽教室A', 15, 0, '已结束'),
+(3, 2, CONCAT(DATE(DATE_SUB(NOW(), INTERVAL 1 DAY)), ' 17:00:00'), '单车房', 25, 0, '已结束');
 
 INSERT INTO booking (member_id, schedule_id, book_time, checkin_time, rating, remark, status) VALUES
 (1, 1, DATE_SUB(NOW(), INTERVAL 12 HOUR), NULL, NULL, NULL, '已预约'),
@@ -213,7 +213,7 @@ INSERT INTO equipment_borrow (equipment_id, member_id, borrow_time, return_time,
 (5, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY), '已归还');
 
 INSERT INTO admin (username, password, name) VALUES
-('admin', 'admin', '系统管理员');
+('admin', '123456', '系统管理员');
 
 DELIMITER //
 
